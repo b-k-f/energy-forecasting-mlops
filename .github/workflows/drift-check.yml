@@ -1,0 +1,37 @@
+name: Weekly drift check
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"   # every Monday 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      temperature_shift:
+        description: "Simulated temperature shift (°C)"
+        default: "0"
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e .
+      - name: Train reference model
+        run: |
+          python -m energy_forecast.data
+          python -m energy_forecast.train
+      - name: Simulate new production data
+        run: |
+          python -m energy_forecast.data --start 2025-01-01 \
+            --temperature-shift ${{ github.event.inputs.temperature_shift || '0' }} \
+            --output data/raw/new_data.csv
+      - name: Check drift (fails the job if drift is detected)
+        run: python -m energy_forecast.monitor data/raw/new_data.csv --fail-on-drift
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: drift-report
+          path: reports/drift_report.json

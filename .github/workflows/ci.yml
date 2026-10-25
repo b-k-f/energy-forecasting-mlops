@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Lint
+        run: ruff check src tests
+      - name: Test
+        run: pytest -v
+
+  train:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e ".[track]"
+      - name: Generate data and train
+        run: |
+          python -m energy_forecast.data
+          python -m energy_forecast.train
+      - name: Quality gate (model must beat the seasonal baseline)
+        run: >-
+          python -c "import json, sys; m = json.load(open('reports/metrics.json'));
+          print(m); sys.exit(m['model_mae'] >= m['baseline_mae'])"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: model
+          path: |
+            models/
+            reports/metrics.json
+
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t energy-forecast-api .
+      - name: Smoke test
+        run: |
+          docker run -d -p 8000:8000 --name api energy-forecast-api
+          for i in $(seq 1 20); do curl -sf localhost:8000/health && break; sleep 2; done
+          curl -sf -X POST localhost:8000/predict -H "Content-Type: application/json" \
+            -d '[{"timestamp":"2024-12-02T09:00:00","building_type":"office","temperature":6.5,"lag_24":85,"lag_168":88,"rolling_mean_24":52}]'

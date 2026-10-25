@@ -1,0 +1,30 @@
+data:
+  start: "2024-01-01"
+  periods_hours: 8760          # one year of hourly data
+  buildings_per_type: 3
+  seed: 42
+  raw_path: data/raw/energy.csv
+
+split:
+  test_days: 30
+
+model:
+  max_iter: 600
+  learning_rate: 0.01
+  max_leaf_nodes: 64
+  random_state: 42
+
+artifacts:
+  model_path: models/model.joblib
+  reference_path: models/reference.csv
+  metrics_path: reports/metrics.json
+  drift_report_path: reports/drift_report.json
+
+mlflow:
+  experiment_name: energy-forecasting
+  # Overridden by the MLFLOW_TRACKING_URI environment variable if set
+  tracking_uri: sqlite:///mlflow.db
+
+monitoring:
+  psi_threshold: 0.2
+  ks_pvalue_threshold: 0.01
