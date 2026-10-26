@@ -33,7 +33,22 @@ Forecasting hourly electricity consumption of buildings, on real meter data (BDG
                  weekly drift check · manual training on real data
 ~~~
 
-## Results (synthetic data)
+## Results
+
+All results are on the last 30 days, held out chronologically, plus rolling-origin backtesting over 4 monthly windows. The baseline is the seasonal naive forecast: same hour last week.
+
+### Real data (BDG2: office, education and lodging buildings)
+
+| Metric | Seasonal baseline | Model |
+|---|---|---|
+| MAE on last 30 days (kWh) | 15.26 | **8.43** |
+| RMSE on last 30 days (kWh) | 34.05 | **21.06** |
+| Mean MAE over 4 monthly backtest folds (kWh) | 14.27 | **8.93 ± 0.76** |
+| 80% interval coverage (target 0.80) | | 0.74 |
+
+The model reduces MAE by about **45 %** over the baseline on real meters, and the error is stable across months. The prediction intervals are slightly too narrow on real data (74 % coverage for an 80 % target): real buildings have more irregular events than the training patterns capture. MAPE is not reported because some buildings have hours with near-zero consumption, which makes percentage errors meaningless; MAE in kWh is the standard metric here.
+
+### Synthetic data (used by tests and CI)
 
 | Metric | Seasonal baseline | Model |
 |---|---|---|
@@ -41,9 +56,7 @@ Forecasting hourly electricity consumption of buildings, on real meter data (BDG
 | Mean MAE over 4 monthly backtest folds (kWh) | 4.63 | **3.39 ± 0.58** |
 | 80% interval coverage (target 0.80) | | **0.79** |
 
-The model reduces MAE by about **30 %** over the baseline, and the prediction intervals are well calibrated. The CI pipeline blocks any model that does not beat the baseline.
-
-On real BDG2 data, run `make data-real && make train-real` (or the *Train on real data* workflow) and compare the runs in MLflow; real meter data is noisier, so expect larger errors than on synthetic data.
+The CI pipeline blocks any model that does not beat the baseline.
 
 ## Data
 
@@ -116,6 +129,7 @@ curl -X POST http://localhost:8000/predict \
 
 ## Possible next steps
 
+- Calibrate the prediction intervals with conformal prediction to reach the target coverage on real data
 - Register models in the MLflow Model Registry and have the API load the "champion" version
 - Deploy the container to AWS (ECS Fargate or App Runner) with the image pushed to ECR from CI
 - Monitor real accuracy once actual consumption is known (concept drift), and retrain automatically
