@@ -12,6 +12,8 @@ def client(small_df, test_config, monkeypatch):
     import energy_forecast.api as api
     from pathlib import Path
     monkeypatch.setattr(api, "MODEL_PATH", Path(test_config["artifacts"]["model_path"]))
+    monkeypatch.setattr(api, "QUANTILE_MODEL_PATH",
+                        Path(test_config["artifacts"]["quantile_model_path"]))
     monkeypatch.setattr(api, "METRICS_PATH", Path(test_config["artifacts"]["metrics_path"]))
     with TestClient(api.app) as c:
         yield c
@@ -28,7 +30,14 @@ def test_predict(client):
     }]
     response = client.post("/predict", json=payload)
     assert response.status_code == 200
-    assert response.json()[0]["predicted_consumption_kwh"] > 0
+    result = response.json()[0]
+    assert result["lower_kwh"] <= result["predicted_consumption_kwh"] <= result["upper_kwh"]
+
+
+def test_model_info_lists_building_types(client):
+    info = client.get("/model-info").json()
+    assert info["building_types"] == ["office", "residential", "retail"]
+    assert info["prediction_intervals"] is True
 
 
 def test_rejects_unknown_building_type(client):

@@ -20,10 +20,8 @@ from scipy.stats import ks_2samp
 
 from energy_forecast.config import load_config
 from energy_forecast.data import load_dataset
-from energy_forecast.features import NUMERIC_FEATURES, build_features
-
-# Features whose distribution is fixed by the calendar, not by the data
-CALENDAR_FEATURES = {"hour", "dayofweek", "month", "is_weekend", "hour_sin", "hour_cos"}
+# Calendar features are skipped: their distribution is fixed by the calendar
+from energy_forecast.features import CALENDAR_FEATURES, NUMERIC_FEATURES, build_features
 
 
 def psi(reference: np.ndarray, current: np.ndarray, bins: int = 10) -> float:

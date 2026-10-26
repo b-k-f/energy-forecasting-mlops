@@ -1,0 +1,44 @@
+name: Train on real data (BDG2)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tune_trials:
+        description: "Optuna trials before training (0 = no tuning)"
+        default: "0"
+
+jobs:
+  train-bdg2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Cache the BDG2 download
+        uses: actions/cache@v4
+        with:
+          path: data/external/bdg2
+          key: bdg2-raw-v1
+      - run: pip install -e ".[track,tune]"
+      - name: Download and prepare BDG2
+        run: python -m energy_forecast.data --source bdg2
+      - name: Tune hyperparameters
+        if: ${{ github.event.inputs.tune_trials != '0' }}
+        run: python -m energy_forecast.tune --source bdg2 --trials ${{ github.event.inputs.tune_trials }}
+      - name: Train and evaluate
+        run: |
+          if [ -f reports/best_params.yaml ]; then
+            python -m energy_forecast.train --source bdg2 --params reports/best_params.yaml
+          else
+            python -m energy_forecast.train --source bdg2
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bdg2-results
+          path: |
+            reports/
+            models/
+            mlflow.db

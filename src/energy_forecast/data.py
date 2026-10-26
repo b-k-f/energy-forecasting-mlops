@@ -92,6 +92,25 @@ def load_dataset(path: str | Path) -> pd.DataFrame:
     return pd.read_csv(path, parse_dates=["timestamp"])
 
 
+def load_training_data(cfg: dict, source: str | None = None) -> pd.DataFrame:
+    """Return the training data for the configured source.
+
+    ``synthetic`` uses ``data.raw_path`` if it exists, otherwise generates data.
+    ``bdg2`` downloads and prepares the real Building Data Genome 2 subset.
+    """
+    source = source or cfg["data"].get("source", "synthetic")
+    if source == "bdg2":
+        from energy_forecast.bdg2 import load_bdg2
+        return load_bdg2(cfg)
+    if source != "synthetic":
+        raise ValueError(f"Unknown data source: {source!r} (use 'synthetic' or 'bdg2')")
+    d = cfg["data"]
+    raw_path = Path(d["raw_path"])
+    if raw_path.exists():
+        return load_dataset(raw_path)
+    return generate_dataset(d["start"], d["periods_hours"], d["buildings_per_type"], d["seed"])
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate the synthetic dataset")
     parser.add_argument("--config", default=None)
@@ -100,7 +119,15 @@ def main() -> None:
     parser.add_argument("--start", default=None, help="Override start date")
     parser.add_argument("--periods", type=int, default=None, help="Override number of hours")
     parser.add_argument("--output", default=None)
+    parser.add_argument("--source", choices=["synthetic", "bdg2"], default="synthetic",
+                        help="bdg2 downloads and prepares the real dataset instead")
     args = parser.parse_args()
+
+    if args.source == "bdg2":
+        from energy_forecast.bdg2 import load_bdg2, summarize
+        df = load_bdg2(load_config(args.config))
+        print(summarize(df).to_string(index=False))
+        return
 
     cfg = load_config(args.config)["data"]
     df = generate_dataset(args.start or cfg["start"],

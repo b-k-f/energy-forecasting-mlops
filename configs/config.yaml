@@ -1,23 +1,59 @@
 data:
+  # synthetic: generated data (fast, used by tests and CI)
+  # bdg2: real data from the Building Data Genome Project 2 (downloaded once)
+  source: synthetic
   start: "2024-01-01"
   periods_hours: 8760          # one year of hourly data
   buildings_per_type: 3
   seed: 42
   raw_path: data/raw/energy.csv
+  bdg2:
+    cache_dir: data/external/bdg2
+    processed_path: data/processed/bdg2_subset.csv
+    # BDG2 primary space usage -> building_type used by the model
+    primary_uses:
+      Office: office
+      Education: education
+      Lodging/residential: lodging
+    buildings_per_type: 10
+    max_missing_ratio: 0.05      # drop buildings with more than 5% missing readings
+    seed: 42
 
 split:
   test_days: 30
 
+backtest:
+  folds: 4                     # successive test windows
+  fold_days: 30
+
 model:
-  max_iter: 600
-  learning_rate: 0.01
-  max_leaf_nodes: 64
+  max_iter: 300
+  learning_rate: 0.05
+  max_leaf_nodes: 31
   random_state: 42
+
+intervals:
+  lower: 0.1                   # 10th and 90th percentiles -> 80% interval
+  upper: 0.9
+
+importance:
+  sample_size: 5000
+  n_repeats: 5
+
+tuning:
+  n_trials: 20
+  folds: 2                     # fewer folds than backtest, to keep tuning fast
+  fold_days: 30
+  best_params_path: reports/best_params.yaml
 
 artifacts:
   model_path: models/model.joblib
+  quantile_model_path: models/quantile_models.joblib
   reference_path: models/reference.csv
   metrics_path: reports/metrics.json
+  backtest_path: reports/backtest.csv
+  importance_path: reports/feature_importance.csv
+  importance_plot_path: reports/feature_importance.png
   drift_report_path: reports/drift_report.json
 
 mlflow:
