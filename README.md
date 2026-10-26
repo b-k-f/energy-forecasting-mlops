@@ -18,27 +18,6 @@ Forecasting hourly electricity consumption of buildings, on real meter data (BDG
 - **Drift monitoring**: Population Stability Index and Kolmogorov–Smirnov test per feature, on a weekly schedule.
 
 ## Architecture
-cat > README.md <<'EOF'
-# Energy Consumption Forecasting — End-to-End MLOps Pipeline
-
-![CI](https://github.com/b-k-f/energy-forecasting-mlops/actions/workflows/ci.yml/badge.svg)
-
-Forecasting hourly electricity consumption of buildings, on real meter data (BDG2) or synthetic data, taken from experimentation to a production-style setup: reproducible training, experiment tracking, a containerised REST API, automated testing and deployment checks, and data drift monitoring.
-
-## What's inside
-
-- **Real and synthetic data**: trains on the [Building Data Genome Project 2](https://github.com/buds-lab/building-data-genome-project-2) (real hourly meters from office, education and lodging buildings, with site weather), or on synthetic data for fast tests and CI.
-- **Leak-free feature engineering**: per-building lags (24h, 168h), a rolling mean of past values, heating and cooling degree-hours, and cyclical calendar encodings.
-- **Rigorous evaluation**: rolling-origin backtesting over several months, always compared to a seasonal naive baseline (same hour last week).
-- **Hyperparameter tuning with Optuna**: optimises the mean backtest error, with every trial logged as a nested MLflow run.
-- **Prediction intervals**: quantile models return an 80% interval around each forecast, with measured coverage.
-- **Explainability**: permutation feature importance, saved as a chart with each run.
-- **Experiment tracking with MLflow**: parameters, metrics, reports and the model artifact for every run.
-- **Serving with FastAPI**: typed validation, batch predictions with intervals, health and model-info endpoints, in a non-root Docker container.
-- **CI/CD with GitHub Actions**: lint, tests on two Python versions, training with a quality gate, Docker build with an API smoke test; plus a manual workflow that trains on the real dataset.
-- **Drift monitoring**: Population Stability Index and Kolmogorov–Smirnov test per feature, on a weekly schedule.
-
-## Architecture
 
 ~~~
  Synthetic data ─┐
